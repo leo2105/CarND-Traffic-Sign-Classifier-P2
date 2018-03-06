@@ -1,1152 +1,247 @@
 
-# Self-Driving Car Engineer Nanodegree
+# **Traffic Sign Recognition** 
 
-## Deep Learning
-
-## Project: Build a Traffic Sign Recognition Classifier
-
-In this notebook, a template is provided for you to implement your functionality in stages, which is required to successfully complete this project. If additional code is required that cannot be included in the notebook, be sure that the Python code is successfully imported and included in your submission if necessary. 
-
-> **Note**: Once you have completed all of the code implementations, you need to finalize your work by exporting the iPython Notebook as an HTML document. Before exporting the notebook to html, all of the code cells need to have been run so that reviewers can see the final implementation and output. You can then export the notebook by using the menu above and navigating to  \n",
-    "**File -> Download as -> HTML (.html)**. Include the finished document along with this notebook as your submission. 
-
-In addition to implementing code, there is a writeup to complete. The writeup should be completed in a separate file, which can be either a markdown file or a pdf document. There is a [write up template](https://github.com/udacity/CarND-Traffic-Sign-Classifier-Project/blob/master/writeup_template.md) that can be used to guide the writing process. Completing the code template and writeup template will cover all of the [rubric points](https://review.udacity.com/#!/rubrics/481/view) for this project.
-
-The [rubric](https://review.udacity.com/#!/rubrics/481/view) contains "Stand Out Suggestions" for enhancing the project beyond the minimum requirements. The stand out suggestions are optional. If you decide to pursue the "stand out suggestions", you can include the code in this Ipython notebook and also discuss the results in the writeup file.
-
-
->**Note:** Code and Markdown cells can be executed using the **Shift + Enter** keyboard shortcut. In addition, Markdown cells can be edited by typically double-clicking the cell to enter edit mode.
-
----
-## Step 0: Load The Data
-
-
-```python
-import pickle
-
-# Files for downloading, https://d17h27t6h515a5.cloudfront.net/topher/2017/February/5898cd6f_traffic-signs-data/traffic-signs-data.zip
-
-# Loading data with pickle library
-
-training_file = 'traffic-signs-data/train.p'
-validation_file = 'traffic-signs-data/valid.p'
-testing_file = 'traffic-signs-data/test.p'
-
-with open(training_file, mode='rb') as f:
-    train = pickle.load(f)
-with open(validation_file, mode='rb') as f:
-    valid = pickle.load(f)
-with open(testing_file, mode='rb') as f:
-    test = pickle.load(f)
-    
-X_train, y_train = train['features'], train['labels']
-X_valid, y_valid = valid['features'], valid['labels']
-X_test, y_test = test['features'], test['labels']
-
-
-print("Done")
-```
-
-    Done
-
-
-
-```python
-file = open("label.csv",'w')
-for x in y_train:
-    file.write(str(x)+',')
-file.close()
-    
-```
-
-
-```python
-import scipy.misc
-file = open("label.csv",'w')
-for i,img in enumerate(X_train):
-    scipy.misc.imsave('./Images/train/image.{}.png'.format(i+1), img)
-#len(lista)
-
-```
+## Writeup
 
 ---
 
-## Step 1: Dataset Summary & Exploration
-
-The pickled data is a dictionary with 4 key/value pairs:
-
-- `'features'` is a 4D array containing raw pixel data of the traffic sign images, (num examples, width, height, channels).
-- `'labels'` is a 1D array containing the label/class id of the traffic sign. The file `signnames.csv` contains id -> name mappings for each id.
-- `'sizes'` is a list containing tuples, (width, height) representing the original width and height the image.
-- `'coords'` is a list containing tuples, (x1, y1, x2, y2) representing coordinates of a bounding box around the sign in the image. **THESE COORDINATES ASSUME THE ORIGINAL IMAGE. THE PICKLED DATA CONTAINS RESIZED VERSIONS (32 by 32) OF THESE IMAGES**
-
-Complete the basic data summary below. Use python, numpy and/or pandas methods to calculate the data summary rather than hard coding the results. For example, the [pandas shape method](http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.shape.html) might be useful for calculating some of the summary results. 
-
-### Provide a Basic Summary of the Data Set Using Python, Numpy and/or Pandas
-
-
-```python
-# Dimensions of data
-
-n_train = X_train.shape[0]
-n_validation = X_valid.shape[0]
-n_test = X_test.shape[0]
-image_shape = X_train[0].shape
-n_classes = len(set(y_train))
-
-print("Size of training set =", n_train)
-print("Size of validation set =", n_validation)
-print("Size of test set =", n_test)
-print("Shape of a traffic sign image =", image_shape)
-print("Number of classes =", n_classes)
-```
-
-    Size of training set = 34799
-    Size of validation set = 4410
-    Size of test set = 12630
-    Shape of a traffic sign image = (32, 32, 3)
-    Number of classes = 43
-
-
-### Include an exploratory visualization of the dataset
-
-Visualize the German Traffic Signs Dataset using the pickled file(s). This is open ended, suggestions include: plotting traffic sign images, plotting the count of each sign, etc. 
-
-The [Matplotlib](http://matplotlib.org/) [examples](http://matplotlib.org/examples/index.html) and [gallery](http://matplotlib.org/gallery.html) pages are a great resource for doing visualizations in Python.
-
-**NOTE:** It's recommended you start with something simple first. If you wish to do more, come back to it after you've completed the rest of the sections. It can be interesting to look at the distribution of classes in the training, validation and test set. Is the distribution the same? Are there more examples of some classes than others?
-
-
-```python
-import numpy as np
-import matplotlib.pyplot as plt
-import random
-%matplotlib inline
-
-# Visualizing training set
-
-fig, axs = plt.subplots(3,3, figsize=(10, 10))
-axs = axs.ravel()
-for i in range(9):
-    index = np.random.randint(len(X_train))
-    image = X_train[index]
-    axs[i].axis('off')
-    axs[i].imshow(image)
-    axs[i].set_title(y_train[index])
-```
-
-
-![png](output_10_0.png)
-
-
-
-```python
-# Plotting the count of each sign
-# Showing the distribution of classes in the training, validation and test set
-
-import matplotlib.pyplot as plt
-import random
-%matplotlib inline
-
-fig, axs = plt.subplots(1,3, figsize=(20, 5))
-axs = axs.ravel()
-
-Data = [np.histogram(y_train, bins=n_classes), np.histogram(y_valid, bins=n_classes), np.histogram(y_test, bins=n_classes)]
-labels = ['Train data', 'Validate data', 'Test data']
-
-hist = [Data[0][0], Data[1][0], Data[2][0]]
-bins = [Data[0][1], Data[1][1], Data[2][1]]
-
-for i in range(3):
-    width = 0.7 * (bins[i][1] - bins[i][0])
-    center = (bins[i][:-1] + bins[i][1:]) / 2
-    axs[i].bar(center, hist[i], width=width)
-    axs[i].set_title(labels[i])
-```
-
-
-![png](output_11_0.png)
-
-
-----
-
-## Step 2: Design and Test a Model Architecture
-
-Design and implement a deep learning model that learns to recognize traffic signs. Train and test your model on the [German Traffic Sign Dataset](http://benchmark.ini.rub.de/?section=gtsrb&subsection=dataset).
-
-The LeNet-5 implementation shown in the [classroom](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/6df7ae49-c61c-4bb2-a23e-6527e69209ec/lessons/601ae704-1035-4287-8b11-e2c2716217ad/concepts/d4aca031-508f-4e0b-b493-e7b706120f81) at the end of the CNN lesson is a solid starting point. You'll have to change the number of classes and possibly the preprocessing, but aside from that it's plug and play! 
-
-With the LeNet-5 solution from the lecture, you should expect a validation set accuracy of about 0.89. To meet specifications, the validation set accuracy will need to be at least 0.93. It is possible to get an even higher accuracy, but 0.93 is the minimum for a successful project submission. 
-
-There are various aspects to consider when thinking about this problem:
-
-- Neural network architecture (is the network over or underfitting?)
-- Play around preprocessing techniques (normalization, rgb to grayscale, etc)
-- Number of examples per label (some have more than others).
-- Generate fake data.
-
-Here is an example of a [published baseline model on this problem](http://yann.lecun.com/exdb/publis/pdf/sermanet-ijcnn-11.pdf). It's not required to be familiar with the approach used in the paper but, it's good practice to try to read papers like these.
-
-### Pre-process the Data Set (normalization, grayscale, etc.)
-
-Minimally, the image data should be normalized so that the data has mean zero and equal variance. For image data, `(pixel - 128)/ 128` is a quick way to approximately normalize the data and can be used in this project. 
-
-Other pre-processing steps are optional. You can try different techniques to see if it improves performance. 
-
-Use the code cell (or multiple code cells, if necessary) to implement the first step of your project.
-
-
-```python
-import numpy as np
-
-# Train Data
-# Formula to convert rgb to gray
-# Y = 0.299 x R + 0.587 x G + 0.114 x B
-# but the mean works well.
-
-X_train_rgb = X_train
-X_train_gray = np.sum(X_train/3, axis=3, keepdims=True)
-
-X_valid_rgb = X_valid
-X_valid_gray = np.sum(X_valid/3, axis=3, keepdims=True)
-
-X_test_rgb = X_test
-X_test_gray = np.sum(X_test/3, axis=3, keepdims=True)
-```
-
-
-```python
-# Images RGB and Gray
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-n_rows, n_cols = 4, 2
-
-fig, axs = plt.subplots(n_rows,n_cols, figsize=(18, 14))
-axs = axs.ravel()
-
-for i in range(4):
-    numb = np.random.randint(len(X_train))
-    axs[i*2].imshow(X_train_rgb[numb])
-    axs[i*2+1].imshow(X_train_gray[numb].squeeze(), cmap='gray')
-
-axs[0].set_title('Image RGB')
-axs[1].set_title('Image Gray')
-
-plt.show()
-
-```
-
-
-![png](output_16_0.png)
-
-
-
-```python
-# Normalize data
-X_train_gray_norm = (X_train_gray - 128) / 128.0
-X_valid_gray_norm = (X_valid_gray - 128) / 128.0
-X_test_gray_norm = (X_test_gray - 128) / 128.0
-
-print(np.mean(X_train_gray_norm))
-print(np.mean(X_valid_gray_norm))
-print(np.mean(X_test_gray_norm))
-```
-
-    -0.354081335648
-    -0.347215411128
-    -0.358215153428
-
-
-
-```python
-### Shuffle training dataset
-
-from sklearn.utils import shuffle
-
-X_train_gray_norm, y_train_gray = shuffle(X_train_gray_norm, y_train)
-```
-
-### Model Architecture
-
-
-```python
-### Define your architecture here.
-### Feel free to use as many code cells as needed.
-
-import tensorflow as tf
-from tensorflow.contrib.layers import flatten
-
-def LeNet(x):
-    # Hyperparameteres
-    mu = 0
-    sigma = 0.1
-    
-    
-    # Layer 1: Convolutional. Input 32 x 32 x 1. Output 28 x 28 x 6
-    conv1_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 1, 6), mean = mu, stddev = sigma))
-    conv1_b = tf.Variable(tf.zeros(6))
-    conv1 = tf.nn.conv2d(x, conv1_W, strides=[1, 1, 1, 1], padding = 'VALID') + conv1_b
-    conv1 = tf.nn.relu(conv1)
-    
-    # Layer 2: Pooling. Input 28 x 28 x 6. Output 14 x 14 x 6
-    pool1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
-    
-    
-    # Layer 3: Convolutional. Input 14 x 14 x 6. Output 10 x 10 x 16
-    conv2_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 6, 16), mean = mu, stddev=sigma))
-    conv2_b = tf.Variable(tf.zeros(16))
-    conv2 = tf.nn.conv2d(pool1, conv2_W, strides=[1, 1, 1, 1], padding='VALID') + conv2_b
-    conv2 = tf.nn.relu(conv2)
-    
-    # Layer 4: Pooling. Input 10 x 10 x 16. Output 5 x 5 x 16
-    pool2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
-    
-    # Layer 5: Flatten. Input 5 x 5 x 16. Output 400
-    fc0 = flatten(pool2)
-    
-    # Layer 6: Fully Connected. Input 400. Output 120.
-    fc1_W = tf.Variable(tf.truncated_normal(shape=(400, 120), mean=mu, stddev=sigma))
-    fc1_b = tf.Variable(tf.zeros(120))
-    fc1 = tf.matmul(fc0, fc1_W) + fc1_b
-    fc1 = tf.nn.relu(fc1)
-    
-    # Layer 7: Fully Connected. Input 120. Output 84.
-    fc2_W = tf.Variable(tf.truncated_normal(shape=(120, 84), mean=mu, stddev=sigma))
-    fc2_b = tf.Variable(tf.zeros(84))
-    fc2 = tf.matmul(fc1, fc2_W) + fc2_b
-    fc2 = tf.nn.relu(fc2)
-    
-    # Layer 8: Fully Connected. Input 84. Output 43.
-    fc3_W = tf.Variable(tf.truncated_normal(shape=(84, 43), mean=mu, stddev=sigma))
-    fc3_b = tf.Variable(tf.zeros(43))
-    logits = tf.matmul(fc2, fc3_W) + fc3_b
-
-    return logits
-```
-
-
-```python
-### Define your architecture here.
-### Feel free to use as many code cells as needed.
-
-import tensorflow as tf
-from tensorflow.contrib.layers import flatten
-
-
-def LeNet_2(x):
-    # Hyperparameteres
-    mu = 0
-    sigma = 0.1
-    
-    
-    # Layer 1: Convolutional. Input 32 x 32 x 1. Output 28 x 28 x 6
-    conv1_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 1, 6), mean = mu, stddev = sigma))
-    conv1_b = tf.Variable(tf.zeros(6))
-    conv1 = tf.nn.conv2d(x, conv1_W, strides=[1, 1, 1, 1], padding = 'VALID') + conv1_b
-    conv1 = tf.nn.relu(conv1)
-    
-    # Layer 2: Pooling. Input 28 x 28 x 6. Output 14 x 14 x 6
-    pool1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
-    
-    
-    # Layer 3: Convolutional. Input 14 x 14 x 6. Output 10 x 10 x 16
-    conv2_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 6, 16), mean = mu, stddev=sigma))
-    conv2_b = tf.Variable(tf.zeros(16))
-    conv2 = tf.nn.conv2d(pool1, conv2_W, strides=[1, 1, 1, 1], padding='VALID') + conv2_b
-    conv2 = tf.nn.relu(conv2)
-    
-    # Layer 4: Pooling. Input 10 x 10 x 16. Output 5 x 5 x 16
-    pool2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
-    
-    # Layer 5: Convolutional. Input 5 x 5 x 16. Output 1 x 1 x 120 
-    conv3_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 16, 120)))
-    conv3_b = tf.Variable(tf.zeros(120))
-    conv3 = tf.nn.conv2d(pool2, conv3_W, strides=[1, 1, 1, 1], padding='VALID')
-    conv3 = tf.nn.relu(conv3)
-    
-    # Layer 6: Flatten. Input 1 x 1 x 120. Output 120
-    fc0 = flatten(conv3)
-    
-    # Layer 7: Fully Connected. Input 120. Output 64.
-    fc1_W = tf.Variable(tf.truncated_normal(shape=(120, 64), mean=mu, stddev=sigma))
-    fc1_b = tf.Variable(tf.zeros(64))
-    fc1 = tf.add(tf.matmul(fc0, fc1_W), fc1_b)
-    fc1 = tf.nn.relu(fc1)
-    
-    # Layer 8: Fully Connected. Input 64. Output 43.
-    fc2_W = tf.Variable(tf.truncated_normal(shape=(64, 43), mean=mu, stddev=sigma))
-    fc2_b = tf.Variable(tf.zeros(43))
-    logits = tf.add(tf.matmul(fc1, fc2_W), fc2_b)
-
-    return logits
-```
-
-
-```python
-import tensorflow as tf
-from tensorflow.contrib.layers import flatten
-
-def LeNet_3(x):    
-    # Hyperparameters
-    mu = 0
-    sigma = 0.1
-    
-    # TODO: Layer 1: Convolutional. Input = 32x32x1. Output = 28x28x6.
-    conv1_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 1, 6), mean = mu, stddev = sigma), name="conv1_W")
-    conv1_b = tf.Variable(tf.zeros(6), name="conv1_b")
-    conv1 = tf.nn.conv2d(x, conv1_W, strides=[1, 1, 1, 1], padding='VALID')
-    conv1 = tf.nn.bias_add(conv1, conv1_b)
-    print("conv1 shape:",conv1.get_shape())
-
-    # TODO: Activation.
-    conv1 = tf.nn.relu(conv1)
-    
-    # TODO: Pooling. Input = 28x28x6. Output = 14x14x6.
-    pool1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
-    
-    # TODO: Layer 2: Convolutional. Output = 10x10x16.
-    conv2_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 6, 16), mean = mu, stddev = sigma), name="conv2_W")
-    conv2_b = tf.Variable(tf.zeros(16), name="conv2_b")
-    conv2 = tf.nn.conv2d(pool1, conv2_W, strides=[1, 1, 1, 1], padding='VALID')
-    conv2 = tf.nn.bias_add(conv2, conv2_b)
-                     
-    # TODO: Activation.
-    conv2 = tf.nn.relu(conv2)
-
-    # TODO: Pooling. Input = 10x10x16. Output = 5x5x16.
-    pool2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
-    
-    # TODO: Layer 3: Convolutional. Output = 1x1x400.
-    conv3_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 16, 400), mean = mu, stddev = sigma), name="conv3_W")
-    conv3_b = tf.Variable(tf.zeros(400), name="conv3_b")
-    conv3 = tf.nn.conv2d(pool2, conv3_W, strides=[1, 1, 1, 1], padding='VALID')
-    conv3 = tf.nn.bias_add(conv3, conv3_b)
-                     
-    # TODO: Activation.
-    conv3 = tf.nn.relu(conv3)
-    
-    # TODO: Flatten. Input = 5x5x16. Output = 400.
-    extra_flatten = flatten(pool2)
-    
-    # Flatten x. Input = 1x1x400. Output = 400.
-    fc0 = flatten(conv3)
-
-    # Concat extra_flatten and fc0. Input = 400 + 400. Output = 800
-    fc1 = tf.concat_v2([fc0, extra_flatten], 1)
-    
-    # Dropout
-    fc1 = tf.nn.dropout(fc1, keep_prob)
-    
-    # TODO: Layer 4: Fully Connected. Input = 800. Output = 43.
-    fc2_W = tf.Variable(tf.truncated_normal(shape=(800, 43), mean = mu, stddev = sigma), name="fc2_W")
-    fc2_b = tf.Variable(tf.zeros(43), name="fc2_b")    
-    logits = tf.add(tf.matmul(fc1, fc2_W), fc2_b)
-    
-    return logits
-
-print('done')
-```
-
-    done
-
-
-
-```python
-import tensorflow as tf
-tf.__version__
-```
-
-
-
-
-    '0.12.0'
-
-
-
-
-```python
-
-X = tf.placeholder(tf.float32, (None, 32, 32, 1))
-y = tf.placeholder(tf.int32, (None))
-one_hot_y = tf.one_hot(y, 43)
-keep_prob = tf.placeholder(tf.float32)
-```
-
-### Train, Validate and Test the Model
-
-A validation set can be used to assess how well the model is performing. A low accuracy on the training and validation
-sets imply underfitting. A high accuracy on the training set but low accuracy on the validation set implies overfitting.
-
-
-```python
-### Train your model here.
-### Calculate and report the accuracy on the training and validation set.
-### Once a final model architecture is selected, 
-### the accuracy on the test set should be calculated and reported as well.
-### Feel free to use as many code cells as needed.
-
-
-# Train
-rate = 9 * 1e-4
-
-logits = LeNet_3(X)
-cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=one_hot_y)
-#logits_softmax = tf.nn.softmax(logits)
-#cross_entropy = -tf.reduce_sum(one_hot_y * tf.log(logits_softmax),[1])
-loss_operation = tf.reduce_mean(cross_entropy)
-optimizer = tf.train.AdamOptimizer(learning_rate=rate)
-training_operation = optimizer.minimize(loss_operation)
-
-```
-
-    conv1 shape: (?, 28, 28, 6)
-
-
-
-```python
-# Evaluation
-correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(one_hot_y, 1))
-accuracy_operation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
-def evaluate(X_data, y_data):
-    steps_per_epoch = len(X_data) // BATCH_SIZE
-    num_examples = steps_per_epoch * BATCH_SIZE
-    if num_examples == 0:
-        num_examples = len(X_data)
-    total_accuracy, total_loss = 0, 0
-    sess = tf.get_default_session()
-    for offnet in range(0, num_examples, BATCH_SIZE):
-        end = offnet + BATCH_SIZE
-        batch_x, batch_y = X_data[offnet:end], y_data[offnet:end]
-        loss, accuracy = sess.run([loss_operation, accuracy_operation], feed_dict={X: batch_x, y: batch_y, keep_prob: 1.0})
-        total_accuracy += (accuracy * batch_x.shape[0])
-        total_loss += (loss * batch_x.shape[0])
-    return total_loss / num_examples, total_accuracy / num_examples
-```
-
-
-```python
-# Train Model
-saver = tf.train.Saver()
-
-EPOCHS = 60
-BATCH_SIZE = 100
-
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    num_examples = len(X_train)
-    
-    print("Training...")
-    print()
-    for i in range(EPOCHS):
-        X_training, y_training = shuffle(X_train_gray_norm, y_train_gray)
-        for offset in range(0, num_examples, BATCH_SIZE):
-            end = offset + BATCH_SIZE
-            batch_x, batch_y = X_training[offset:end], y_training[offset:end]
-            sess.run(training_operation, feed_dict={X: batch_x , y: batch_y , keep_prob: 0.5})
-        
-        validation_loss, validation_accuracy = evaluate(X_valid_gray_norm, y_valid)
-        print("EPOCH {} ...".format(i+1))
-        print("Validation loss = {:.3f}".format(validation_loss))
-        print("Validation Acurracy = {:.3f}".format(validation_accuracy))
-        print()
-        
-    # Evaluate on the test data
-    test_loss, test_acc = evaluate(X_test_gray_norm, y_test)
-    print("Test loss = {:.3f}".format(test_loss))
-    print("Test accuracy = {:.3f}".format(test_acc))
-
-#     try:
-#         saver
-#     except NameError:
-    save_path = saver.save(sess, "./lenet.ckpt")
-    print("Model saved in file: %s" % save_path)
-            
-```
-
-    Training...
-    
-    EPOCH 1 ...
-    Validation loss = 0.735
-    Validation Acurracy = 0.810
-    
-    EPOCH 2 ...
-    Validation loss = 0.431
-    Validation Acurracy = 0.891
-    
-    EPOCH 3 ...
-    Validation loss = 0.375
-    Validation Acurracy = 0.901
-    
-    EPOCH 4 ...
-    Validation loss = 0.346
-    Validation Acurracy = 0.906
-    
-    EPOCH 5 ...
-    Validation loss = 0.273
-    Validation Acurracy = 0.931
-    
-    EPOCH 6 ...
-    Validation loss = 0.309
-    Validation Acurracy = 0.922
-    
-    EPOCH 7 ...
-    Validation loss = 0.287
-    Validation Acurracy = 0.934
-    
-    EPOCH 8 ...
-    Validation loss = 0.310
-    Validation Acurracy = 0.925
-    
-    EPOCH 9 ...
-    Validation loss = 0.280
-    Validation Acurracy = 0.934
-    
-    EPOCH 10 ...
-    Validation loss = 0.307
-    Validation Acurracy = 0.929
-    
-    EPOCH 11 ...
-    Validation loss = 0.331
-    Validation Acurracy = 0.925
-    
-    EPOCH 12 ...
-    Validation loss = 0.268
-    Validation Acurracy = 0.932
-    
-    EPOCH 13 ...
-    Validation loss = 0.286
-    Validation Acurracy = 0.939
-    
-    EPOCH 14 ...
-    Validation loss = 0.307
-    Validation Acurracy = 0.934
-    
-    EPOCH 15 ...
-    Validation loss = 0.258
-    Validation Acurracy = 0.937
-    
-    EPOCH 16 ...
-    Validation loss = 0.299
-    Validation Acurracy = 0.936
-    
-    EPOCH 17 ...
-    Validation loss = 0.301
-    Validation Acurracy = 0.941
-    
-    EPOCH 18 ...
-    Validation loss = 0.309
-    Validation Acurracy = 0.943
-    
-    EPOCH 19 ...
-    Validation loss = 0.246
-    Validation Acurracy = 0.942
-    
-    EPOCH 20 ...
-    Validation loss = 0.284
-    Validation Acurracy = 0.944
-    
-    EPOCH 21 ...
-    Validation loss = 0.341
-    Validation Acurracy = 0.941
-    
-    EPOCH 22 ...
-    Validation loss = 0.287
-    Validation Acurracy = 0.941
-    
-    EPOCH 23 ...
-    Validation loss = 0.364
-    Validation Acurracy = 0.941
-    
-    EPOCH 24 ...
-    Validation loss = 0.409
-    Validation Acurracy = 0.940
-    
-    EPOCH 25 ...
-    Validation loss = 0.416
-    Validation Acurracy = 0.928
-    
-    EPOCH 26 ...
-    Validation loss = 0.375
-    Validation Acurracy = 0.940
-    
-    EPOCH 27 ...
-    Validation loss = 0.342
-    Validation Acurracy = 0.947
-    
-    EPOCH 28 ...
-    Validation loss = 0.313
-    Validation Acurracy = 0.948
-    
-    EPOCH 29 ...
-    Validation loss = 0.408
-    Validation Acurracy = 0.940
-    
-    EPOCH 30 ...
-    Validation loss = 0.367
-    Validation Acurracy = 0.941
-    
-    EPOCH 31 ...
-    Validation loss = 0.396
-    Validation Acurracy = 0.937
-    
-    EPOCH 32 ...
-    Validation loss = 0.369
-    Validation Acurracy = 0.945
-    
-    EPOCH 33 ...
-    Validation loss = 0.381
-    Validation Acurracy = 0.949
-    
-    EPOCH 34 ...
-    Validation loss = 0.324
-    Validation Acurracy = 0.944
-    
-    EPOCH 35 ...
-    Validation loss = 0.289
-    Validation Acurracy = 0.949
-    
-    EPOCH 36 ...
-    Validation loss = 0.349
-    Validation Acurracy = 0.951
-    
-    EPOCH 37 ...
-    Validation loss = 0.309
-    Validation Acurracy = 0.950
-    
-    EPOCH 38 ...
-    Validation loss = 0.308
-    Validation Acurracy = 0.950
-    
-    EPOCH 39 ...
-    Validation loss = 0.317
-    Validation Acurracy = 0.953
-    
-    EPOCH 40 ...
-    Validation loss = 0.313
-    Validation Acurracy = 0.953
-    
-    EPOCH 41 ...
-    Validation loss = 0.361
-    Validation Acurracy = 0.949
-    
-    EPOCH 42 ...
-    Validation loss = 0.389
-    Validation Acurracy = 0.952
-    
-    EPOCH 43 ...
-    Validation loss = 0.404
-    Validation Acurracy = 0.948
-    
-    EPOCH 44 ...
-    Validation loss = 0.337
-    Validation Acurracy = 0.945
-    
-    EPOCH 45 ...
-    Validation loss = 0.426
-    Validation Acurracy = 0.945
-    
-    EPOCH 46 ...
-    Validation loss = 0.443
-    Validation Acurracy = 0.944
-    
-    EPOCH 47 ...
-    Validation loss = 0.393
-    Validation Acurracy = 0.948
-    
-    EPOCH 48 ...
-    Validation loss = 0.378
-    Validation Acurracy = 0.957
-    
-    EPOCH 49 ...
-    Validation loss = 0.368
-    Validation Acurracy = 0.954
-    
-    EPOCH 50 ...
-    Validation loss = 0.437
-    Validation Acurracy = 0.946
-    
-    EPOCH 51 ...
-    Validation loss = 0.348
-    Validation Acurracy = 0.955
-    
-    EPOCH 52 ...
-    Validation loss = 0.431
-    Validation Acurracy = 0.950
-    
-    EPOCH 53 ...
-    Validation loss = 0.369
-    Validation Acurracy = 0.954
-    
-    EPOCH 54 ...
-    Validation loss = 0.439
-    Validation Acurracy = 0.947
-    
-    EPOCH 55 ...
-    Validation loss = 0.440
-    Validation Acurracy = 0.949
-    
-    EPOCH 56 ...
-    Validation loss = 0.447
-    Validation Acurracy = 0.951
-    
-    EPOCH 57 ...
-    Validation loss = 0.338
-    Validation Acurracy = 0.955
-    
-    EPOCH 58 ...
-    Validation loss = 0.465
-    Validation Acurracy = 0.942
-    
-    EPOCH 59 ...
-    Validation loss = 0.416
-    Validation Acurracy = 0.957
-    
-    EPOCH 60 ...
-    Validation loss = 0.403
-    Validation Acurracy = 0.958
-    
-    Test loss = 0.614
-    Test accuracy = 0.947
-    Model saved in file: ./lenet.ckpt
-
-
-## Log
-- Lenet 89.6%
-    - Preprocessing: grayscale, normalization
-    - batch size: 128
-    - epochs: 10
-    - rate: 0.001
-- LeNet_2 86.8%
-    - Conv.layer instead of FC
-- LeNet_3 92.7%
-    - flatten layer 2 to FC layer
-- LeNet_3 94.3%
-    - epochs: 60
-- LeNet_3 94.9%
-    - rate: 0.0009
-
-
-```python
-import tensorflow as tf
-saver2 = tf.train.Saver()
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    saver2.restore(sess, './lenet.ckpt')
-    
-    train_loss, train_acc = evaluate(X_train_gray_norm, y_train_gray)
-    valid_loss, valid_acc = evaluate(X_valid_gray_norm, y_valid)
-    test_loss, test_acc = evaluate(X_test_gray_norm, y_test)
-    print("Train loss = {:.3f}".format(train_loss))
-    print("Train accuracy = {:.3f}".format(train_acc))
-    print("Valid loss = {:.3f}".format(valid_loss))
-    print("Valid accuracy = {:.3f}".format(valid_acc))
-    print("Test loss = {:.3f}".format(test_loss))
-    print("Test accuracy = {:.3f}".format(test_acc))
-```
-
-    Train loss = 0.000
-    Train accuracy = 1.000
-    Valid loss = 0.403
-    Valid accuracy = 0.958
-    Test loss = 0.614
-    Test accuracy = 0.947
-
+**Build a Traffic Sign Recognition Project**
+
+The goals / steps of this project are the following:
+* Load the data set (see below for links to the project data set)
+* Explore, summarize and visualize the data set
+* Design, train and test a model architecture
+* Use the model to make predictions on new images
+* Analyze the softmax probabilities of the new images
+* Summarize the results with a written report
+
+
+[//]: # (Image References)
+
+[image1]: ./datavisualization.png "Visualization"
+[image2]: ./graybeforeafter.png "Before Gray, After Gray"
+[image3]: ./modifiedLeNet.jpeg "LeNet modified"
+[image4]: ./InternetImages/1x.png "ImageInt1"
+[image5]: ./InternetImages/2x.png "ImageInt2"
+[image6]: ./InternetImages/3x.png "ImageInt3"
+[image7]: ./InternetImages/4x.png "ImageInt4"
+[image8]: ./InternetImages/5x.png "ImageInt5"
+[image9]: ./InternetImages/6x.png "ImageInt6"
+[image10]: ./softmaxvisualization.png "Bar Graphics Softmax" 
 
 ---
 
-## Step 3: Test a Model on New Images
+### Data Set Summary & Exploration
 
-To give yourself more insight into how your model is working, download at least five pictures of German traffic signs from the web and use your model to predict the traffic sign type.
+I just used an array property, *shape*. And the function *len()*. Later, I use numpy and matplotlib functions for calculating arithmetic operations and make visualizations.
 
-You may find `signnames.csv` useful as it contains mappings from the class id (integer) to the actual sign name.
+* The size of training set is 34799
+* The size of the validation set is 4410
+* The size of test set is 12630
+* The shape of a traffic sign image is (32, 32, 3)
+* The number of unique classes/labels in the data set is 43
 
-### Load and Output the Images
+#### 2. Include an exploratory visualization of the dataset.
 
+Here is an exploratory visualization of the data set. It is a bar chart showing how the data is distribuited.
 
-```python
-### Load the images and plot them here.
-### Feel free to use as many code cells as needed.
-import matplotlib.pyplot as plt
-import glob
-import matplotlib.image as mpimg
-import numpy as np
-from PIL import Image
-import cv2
-
-# img1 = cv2.imread('InternetImages/image3.jpg')
-# img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
-# img1 = cv2.resize(img1, (32,32))
-# plt.imshow(img1)
-# plt.show()
-
-# -------------------------------
-
-fig, axs = plt.subplots(1,6, figsize=(10, 5))
-axs = axs.ravel()
-
-images = []
-
-for i, img in enumerate(glob.glob('InternetImages/*x.png')):
-    imagen_BGR = cv2.imread(img)
-    imagen_BGR = cv2.resize(imagen_BGR, (32,32))
-    imagen_RGB = cv2.cvtColor(imagen_BGR, cv2.COLOR_BGR2RGB)
-    axs[i].imshow(imagen_RGB)
-    axs[i].axis('off')
-    images.append(imagen_RGB)
-
-plt.show()
-
-images = np.asarray(images)
-images_gray = np.sum(images/3, axis=3, keepdims=True)
-images_norm = (images_gray - 128) / 128
-
-plt.imshow(images_norm[0].squeeze(), cmap='gray')
-plt.show()
-print(images_norm.shape)
-```
-
-
-![png](output_34_0.png)
+We can see that training set, validation set and train set have the same distribution.
 
 
 
-![png](output_34_1.png)
+![alt text][image1]
+
+### Design and Test a Model Architecture
+
+As a first step, I decided to convert the images to grayscale because of the complexity of the model. We can use a model for RGB images but it would take a lot of time. Another thing, in this dataset we prefer to take in consideration the shape of the sign traffics instead of color.
+
+Here is an example of a traffic sign image before and after grayscaling.
+
+![alt text][image2]
+
+As a last step, I normalized the image data because It helps the convergence of the model. Converge faster.
+
+I did not generate additional data. If I was do, It would help to generalize the model to test in internet images or others images that we have never seen with a lot of noise.
+
+I would used scaling, translation, rotation, adding lighting, gaussian noise, etc for data-augmentation. 
 
 
-    (6, 32, 32, 1)
+#### 2. Describe what your final model architecture looks like including model type, layers, layer sizes, connectivity, etc.) Consider including a diagram and/or table describing the final model.
 
+My final model consisted of the following layers:
 
-### Predict the Sign Type for Each Image
+| Layer         		|     Description	        					| 
+|:---------------------:|:---------------------------------------------:| 
+| Input         		| 32x32x3 RGB image   							| 
+| Convolution 5x5     	| 1x1 stride, Valid padding, outputs 28x28x6 	|
+| RELU					|												|
+| Max pooling 2x2      	| 2x2 stride,  outputs 14x14x6
+    |
+| Convolution 5x5	    | 1x1 stride, Valid padding, outputs 10x10x16.     |
+| RELU					|												|
+| Max pooling 2x2      	| 2x2 stride,  outputs 5x5x16
+    |
+| Convolution 5x5	    | 1x1 stride, Valid padding, outputs 1x1x400.     |
+| RELU					|												|
+| Fully connected		| input: concatenate("pool2","conv3"), output 800.      	 |
+| Dropout               | keep_prob: 0.5
+    |
+| Fully connected		| output 800.      	 
+    |
+| Softmax		        |      	 
+    |
+| Adam optimizer        | lr: 9e-4
+    |
 
+## LeNet Model modified for Sign Classification
 
-```python
-### Run the predictions here and use the model to output the prediction for each image.
-### Make sure to pre-process the images with the same pre-processing pipeline used earlier.
-### Feel free to use as many code cells as needed.
+![alt text][image3]
 
-import tensorflow as tf
-import pandas as pd
+#### 3. Describe how you trained your model. The discussion can include the type of optimizer, the batch size, number of epochs and any hyperparameters such as learning rate.
 
-labels = [1, 18, 11, 25, 3, 38]
+To train the model, I used an my CPU and GPU of AWS. I did first iterations on my CPU because I put only 10 iterations. When I thought this model would be great I ran on GPU.
 
-softmax_logits = tf.nn.softmax(logits)
-top_k = tf.nn.top_k(softmax_logits, k=1)
+I tried with a batch size equal to 100 and only 60 epochs. It worked well. I had overfitting and underfitting with 256, 512 or 50 of batch size. It took only 60 epochs because, if I use more epochs It gives overfitting.
 
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    saver2.restore(sess, './lenet.ckpt')
+I use Adam optimizer because It combines Adagrad and SGD method in some way and I do not have to put the *learning decay* like hyperparameter.
+
+I used to use learning rate equal to 1e-3, but accuracy was too low. So, I decided to put 5e-4 or 9e-4 and it worked better.
+
+#### 4. Describe the approach taken for finding a solution and getting the validation set accuracy to be at least 0.93. Include in the discussion the results on the training, validation and test sets and where in the code these were calculated. Your approach may have been an iterative process, in which case, outline the steps you took to get to the final solution and why you chose those steps. Perhaps your solution involved an already well known implementation or architecture. In this case, discuss why you think the architecture is suitable for the current problem.
+
+My final model results were:
+* training set accuracy of 100%
+* validation set accuracy of 95.7%
+* test set accuracy of 94.9%
+
+If an iterative approach was chosen:
+* What was the first architecture that was tried and why was it chosen?
+    - The first architecture was LeNet just modifying the last layer, 43 classes instead of 10.
+    - The model was implemented on the notebook.
+* What were some problems with the initial architecture?
+    - For digits, LeNet works well, but we need to make an architecture for traffic signs. I just added some neurons and change hyperparameters and I got good results.
+* How was the architecture adjusted and why was it adjusted? Typical adjustments could include choosing a different model architecture, adding or taking away layers (pooling, dropout, convolution, etc), using an activation function or changing the activation function. One common justification for adjusting an architecture would be due to overfitting or underfitting. A high accuracy on the training set but low accuracy on the validation set indicates over fitting; a low accuracy on both sets indicates under fitting.
+
+    - I was modifying the model because there was an under fitting. A convolutional layer was placed instead of the first fully-connected layer. 
+    - To avoid over-fitting, the dropout regularization method was added between the two fully connected layers. 
+    - Thanks to this modification, 94% accuracy was achieved in the validation data.
+* Which parameters were tuned? How were they adjusted and why?
+    - Kernel size. 5x5 instead of 3x3 in every convolutional layer. To get another image processing or filter for training set images. 
+sabemos que filtros mas pequenos nos da detalles mas finos de las imagenes, pero con filtro mas grandes quizas quitamos detalles irrelevantes. 
+    - Learning rate equal to 0.0009. I changed because the loss was increasing after some epochs. I decided to reduce learning rate to keep decreasing the loss.
+    - Neurons of FC layers was 400-120-84-43. I changed to 800-43. For reducing the complexity of the model and have more neurons where to classify.
+    - I have changed batch size to 100. I have tried with 128, 256, 512 , 50. But, 100 give me better results and it is faster than others.
     
-    my_top_k = sess.run(top_k, feed_dict={X: images_norm, keep_prob:1.0})
-
-names = pd.read_csv('signnames.csv')
-# ClassId and SignName
-fig, axs = plt.subplots(len(images),1, figsize=(20,20))
-axs = axs.ravel()
-
-
-for i, img in enumerate(images_norm):
-    axs[i].axis('off')
-    axs[i].imshow(img.squeeze(), cmap='gray')
-    axs[i].set_title(names['SignName'][my_top_k[1][i]]) 
-```
-
-
-![png](output_36_0.png)
-
-
-### Analyze Performance
-
-
-```python
-### Calculate the accuracy for these 5 new images. 
-### For example, if the model predicted 1 out of 5 signs correctly, it's 20% accurate on these new images.
-
-import tensorflow as tf
-saver2 = tf.train.Saver()
-
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    saver2.restore(sess, './lenet.ckpt')
+* What are some of the important design choices and why were they chosen? For example, why might a convolution layer work well with this problem? How might a dropout layer help with creating a successful model?
+    - Dropout layer helped me to avoid over fitting. I use keep_prob equal to 0.5
+    - I think the most important thing was changing first FC by Convolutional layer and adding a flattened Pooling layer to first FC.
     
-    test_loss, test_acc = evaluate(images_norm, labels)
-    print("Test loss = {:.3f}".format(test_loss))
-    print("Test accuracy = {:.3f}".format(test_acc))
-```
-
-    Test loss = 0.000
-    Test accuracy = 1.000
-
-
-### Output Top 5 Softmax Probabilities For Each Image Found on the Web
-
-For each of the new images, print out the model's softmax probabilities to show the **certainty** of the model's predictions (limit the output to the top 5 probabilities for each image). [`tf.nn.top_k`](https://www.tensorflow.org/versions/r0.12/api_docs/python/nn.html#top_k) could prove helpful here. 
-
-The example below demonstrates how tf.nn.top_k can be used to find the top k predictions for each image.
-
-`tf.nn.top_k` will return the values and indices (class ids) of the top k predictions. So if k=3, for each sign, it'll return the 3 largest probabilities (out of a possible 43) and the correspoding class ids.
-
-Take this numpy array as an example. The values in the array represent predictions. The array contains softmax probabilities for five candidate images with six possible classes. `tf.nn.top_k` is used to choose the three classes with the highest probability:
-
-```
-# (5, 6) array
-a = np.array([[ 0.24879643,  0.07032244,  0.12641572,  0.34763842,  0.07893497,
-         0.12789202],
-       [ 0.28086119,  0.27569815,  0.08594638,  0.0178669 ,  0.18063401,
-         0.15899337],
-       [ 0.26076848,  0.23664738,  0.08020603,  0.07001922,  0.1134371 ,
-         0.23892179],
-       [ 0.11943333,  0.29198961,  0.02605103,  0.26234032,  0.1351348 ,
-         0.16505091],
-       [ 0.09561176,  0.34396535,  0.0643941 ,  0.16240774,  0.24206137,
-         0.09155967]])
-```
-
-Running it through `sess.run(tf.nn.top_k(tf.constant(a), k=3))` produces:
-
-```
-TopKV2(values=array([[ 0.34763842,  0.24879643,  0.12789202],
-       [ 0.28086119,  0.27569815,  0.18063401],
-       [ 0.26076848,  0.23892179,  0.23664738],
-       [ 0.29198961,  0.26234032,  0.16505091],
-       [ 0.34396535,  0.24206137,  0.16240774]]), indices=array([[3, 0, 5],
-       [0, 1, 4],
-       [0, 5, 1],
-       [1, 3, 5],
-       [1, 4, 3]], dtype=int32))
-```
-
-Looking just at the first row we get `[ 0.34763842,  0.24879643,  0.12789202]`, you can confirm these are the 3 largest probabilities in `a`. You'll also notice `[3, 0, 5]` are the corresponding indices.
-
-
-```python
-### Print out the top five softmax probabilities for the predictions on the German traffic sign images found on the web. 
-### Feel free to use as many code cells as needed.
-
-import cv2
-softmax_logits = tf.nn.softmax(logits)
-top_k = tf.nn.top_k(softmax_logits, k=5)
-
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    saver.restore(sess, './lenet.ckpt')
-    my_softmax_logits = sess.run(softmax_logits, feed_dict={X: images_norm, keep_prob: 1.0})
-    my_top_k = sess.run(top_k, feed_dict={X: images_norm, keep_prob:1.0})
+If a well known architecture was chosen:
+* What architecture was chosen?
+    - Model from Sermanet and LeCun paper (http://yann.lecun.com/exdb/publis/pdf/sermanet-ijcnn-11.pdf).
     
-    fig, axs = plt.subplots(len(images_norm),6, figsize=(15, 15))
-    fig.subplots_adjust(hspace = .4, wspace=.2)
-    axs = axs.ravel()
+* Why did you believe it would be relevant to the traffic sign application?
+    - In the paper of Yann LeCun, they say that their model achieved almost 100% of precision. I think this model is a best way to start better traffic sign classifier.
+    
+* How does the final model's accuracy on the training, validation and test set provide evidence that the model is working well?
+    - Accuracy on the training is 100%, Validation 95.8% and Test 94.9%. These are good results and I proved on 6 Internet Images. 
 
-    for i, image in enumerate(images):
-        axs[6*i].axis('off')
-        axs[6*i].imshow(image)
-        axs[6*i].set_title('input')
-        guess1 = my_top_k[1][i][0]
-        index1 = np.argwhere(y_train_gray == guess1)[0]
-        axs[6*i+1].axis('off')
-        axs[6*i+1].imshow(X_train_gray_norm[index1].squeeze(), cmap='gray')
-        axs[6*i+1].set_title('top guess: {} ({:.0f}%)'.format(guess1, 100*my_top_k[0][i][0]))
-        guess2 = my_top_k[1][i][1]
-        index2 = np.argwhere(y_train_gray == guess2)[0]
-        axs[6*i+2].axis('off')
-        axs[6*i+2].imshow(X_train_gray_norm[index2].squeeze(), cmap='gray')
-        axs[6*i+2].set_title('2nd guess: {} ({:.0f}%)'.format(guess2, 100*my_top_k[0][i][1]))
-        guess3 = my_top_k[1][i][2]
-        index3 = np.argwhere(y_train_gray == guess3)[0]
-        axs[6*i+3].axis('off')
-        axs[6*i+3].imshow(X_train_gray_norm[index3].squeeze(), cmap='gray')
-        axs[6*i+3].set_title('3rd guess: {} ({:.0f}%)'.format(guess3, 100*my_top_k[0][i][2]))
-        
-        guess4 = my_top_k[1][i][3]
-        index4 = np.argwhere(y_train_gray == guess4)[0]
-        axs[6*i+4].axis('off')
-        axs[6*i+4].imshow(X_train_gray_norm[index4].squeeze(), cmap='gray')
-        axs[6*i+4].set_title('top guess: {} ({:.0f}%)'.format(guess4, 100*my_top_k[0][i][3]))
-        
-        guess5 = my_top_k[1][i][4]
-        index5 = np.argwhere(y_train_gray == guess5)[0]
-        axs[6*i+5].axis('off')
-        axs[6*i+5].imshow(X_train_gray_norm[index5].squeeze(), cmap='gray')
-        axs[6*i+5].set_title('top guess: {} ({:.0f}%)'.format(guess5, 100*my_top_k[0][i][4]))
-```
+### Test a Model on New Images
+
+#### 1. Choose five German traffic signs found on the web and provide them in the report. For each image, discuss what quality or qualities might be difficult to classify.
+
+Here are six German traffic signs that I found on the web:
+
+![alt text][image4] ![alt text][image5] ![alt text][image6] 
+![alt text][image7] ![alt text][image8] ![alt text][image9]
+
+The fifth image might be difficult to classify because there are many ones very similar from different class. And, this image comes with noise. Other images were easier to classify correctly because each have many aspects that could be easy to distinguish. 
+
+#### 2. Discuss the model's predictions on these new traffic signs and compare the results to predicting on the test set. At a minimum, discuss what the predictions were, the accuracy on these new predictions, and compare the accuracy to the accuracy on the test set (OPTIONAL: Discuss the results in more detail as described in the "Stand Out Suggestions" part of the rubric).
+
+Here are the results of the prediction:
+
+| Image			        |     Prediction	        					| 
+|:---------------------:|:---------------------------------------------:| 
+| Right-of-way at the next intersection | Right-of-way at the next intersection 									| 
+| Speed limit (30km/h)     			| Speed limit (30km/h) 										|
+| Keep right     		| Keep right				 				|
+| General caution			| General caution    							|
+| Road work		| Road work    							|
+| Speed limit (60km/h)					| Speed limit (30km/h)											|
+
+The model was able to correctly guess 6 of the 6 traffic signs, which gives an accuracy of 100%. This compares favorably to the accuracy on the test set of 94.9%
+
+#### 3. Describe how certain the model is when predicting on each of the five new images by looking at the softmax probabilities for each prediction. Provide the top 5 softmax probabilities for each image along with the sign type of each probability. (OPTIONAL: as described in the "Stand Out Suggestions" part of the rubric, visualizations can also be provided such as bar charts)
+
+![alt text][image10]
+
+The code for making predictions on my final model is located in the 21st cell of the Jupyter notebook.
+
+For the first image, the model is really sure that this is a Speed limit (30km/h) (probability of 1.0), and the image does contain a stop sign. The top five soft max probabilities were
+
+| Probability         	|     Prediction	        					| 
+|:---------------------:|:---------------------------------------------:| 
+| 1.00         			| Speed limit (30km/h)   									| 
+| .0     				| Speed limit (80km/h)										|
+| .0					| Double curve										|
+| .0	      			| Roundabout mandatory					 				|
+| .0				    | End of speed limit (80km/h)      							|
+
+For the second image, the model is really sure that this is a General caution (probability of 1.0), and the image does contain a General caution sign. The top five soft max probabilities were
+
+| Probability         	|     Prediction	        					| 
+|:---------------------:|:---------------------------------------------:| 
+| 1.00         			| General caution  									| 
+| .0     				| Right-of-way at the next intersection										|
+| .0					| Children crossing										|
+| .0	      			| Traffic signals					 				|
+| .0				    | Speed limit (30km/h)    							|
+
+For the third image, the model is really sure that this is a Right-of-way at the next intersection (probability of 1.0), and the image does contain a Right-of-way at the next intersection sign. The top five soft max probabilities were
+
+| Probability         	|     Prediction	        					| 
+|:---------------------:|:---------------------------------------------:| 
+| 1.00         			| Right-of-way at the next intersection  									| 
+| .0     				| Beware of ice/snow									|
+| .0					| General caution										|
+| .0	      			| Pedestrians					 				|
+| .0				    | Speed limit (80km/h)     							|
+
+For the forth image, the model is really sure that this is a Road work  (probability of 1.0), and the image does contain a Road work sign. The top five soft max probabilities were
+
+| Probability         	|     Prediction	        					| 
+|:---------------------:|:---------------------------------------------:| 
+| 1.00         			| Road work  									| 
+| .0     				| Keep left										|
+| .0					| Traffic signals										|
+| .0	      			| Bumpy road					 				|
+| .0				    | Dangerous curve to the right     							|
+
+For the fifth image, the model is really sure that this is a Speed limit (60km/h) (probability of 1.0), and the image does contain a Speed limit (60km/h) sign. The top five soft max probabilities were
+
+| Probability         	|     Prediction	        					| 
+|:---------------------:|:---------------------------------------------:| 
+| 1.00         			| Speed limit (60km/h) 									| 
+| .0     				| Slippery road										|
+| .0					| Children crossing										|
+| .0	      			| Beware of ice/snow					 				|
+| .0				    | Turn left ahead     							|
+
+For the sixth image, the model is really sure that this is a Keep right (probability of 1.0), and the image does contain a Keep right sign. The top five soft max probabilities were
+
+| Probability         	|     Prediction	        					| 
+|:---------------------:|:---------------------------------------------:| 
+| 1.00         			| Keep right 									| 
+| .0     				| Speed limit (20km/h)										|
+| .0					| Speed limit (30km/h)											|
+| .0	      			| Speed limit (50km/h)						 				|
+| .0				    | Speed limit (60km/h)	      							|
 
 
-![png](output_41_0.png)
 
 
-
-```python
-fig, axs = plt.subplots(6,2, figsize=(9, 19))
-axs = axs.ravel()
-
-for i in range(len(my_softmax_logits)):
-    axs[2*i].axis('off')
-    axs[2*i].imshow(images[i])
-    axs[2*i+1].bar(np.arange(n_classes), my_softmax_logits[i]) 
-    axs[2*i+1].set_ylabel('Softmax probability')
-```
+### (Optional) Visualizing the Neural Network (See Step 4 of the Ipython notebook for more details)
+#### 1. Discuss the visual output of your trained network's feature maps. What characteristics did the neural network use to make classifications?
 
 
-![png](output_42_0.png)
-
-
-### Project Writeup
-
-Once you have completed the code implementation, document your results in a project writeup using this [template](https://github.com/udacity/CarND-Traffic-Sign-Classifier-Project/blob/master/writeup_template.md) as a guide. The writeup can be in a markdown or pdf file. 
-
-> **Note**: Once you have completed all of the code implementations and successfully answered each question above, you may finalize your work by exporting the iPython Notebook as an HTML document. You can do this by using the menu above and navigating to  \n",
-    "**File -> Download as -> HTML (.html)**. Include the finished document along with this notebook as your submission.
-
----
-
-## Step 4 (Optional): Visualize the Neural Network's State with Test Images
-
- This Section is not required to complete but acts as an additional excersise for understaning the output of a neural network's weights. While neural networks can be a great learning device they are often referred to as a black box. We can understand what the weights of a neural network look like better by plotting their feature maps. After successfully training your neural network you can see what it's feature maps look like by plotting the output of the network's weight layers in response to a test stimuli image. From these plotted feature maps, it's possible to see what characteristics of an image the network finds interesting. For a sign, maybe the inner network feature maps react with high activation to the sign's boundary outline or to the contrast in the sign's painted symbol.
-
- Provided for you below is the function code that allows you to get the visualization output of any tensorflow weight layer you want. The inputs to the function should be a stimuli image, one used during training or a new one you provided, and then the tensorflow variable name that represents the layer's state during the training process, for instance if you wanted to see what the [LeNet lab's](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/6df7ae49-c61c-4bb2-a23e-6527e69209ec/lessons/601ae704-1035-4287-8b11-e2c2716217ad/concepts/d4aca031-508f-4e0b-b493-e7b706120f81) feature maps looked like for it's second convolutional layer you could enter conv2 as the tf_activation variable.
-
-For an example of what feature map outputs look like, check out NVIDIA's results in their paper [End-to-End Deep Learning for Self-Driving Cars](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/) in the section Visualization of internal CNN State. NVIDIA was able to show that their network's inner weights had high activations to road boundary lines by comparing feature maps from an image with a clear path to one without. Try experimenting with a similar test to show that your trained network's weights are looking for interesting features, whether it's looking at differences in feature maps from images with or without a sign, or even what feature maps look like in a trained network vs a completely untrained one on the same sign image.
-
-<figure>
- <img src="visualize_cnn.png" width="380" alt="Combined Image" />
- <figcaption>
- <p></p> 
- <p style="text-align: center;"> Your output should look something like this (above)</p> 
- </figcaption>
-</figure>
- <p></p> 
-
-
-
-```python
-### Visualize your network's feature maps here.
-### Feel free to use as many code cells as needed.
-
-# image_input: the test image being fed into the network to produce the feature maps
-# tf_activation: should be a tf variable name used during your training procedure that represents the calculated state of a specific weight layer
-# activation_min/max: can be used to view the activation contrast in more detail, by default matplot sets min and max to the actual min and max values of the output
-# plt_num: used to plot out multiple different weight feature map sets on the same block, just extend the plt number for each new feature map entry
-
-def outputFeatureMap(image_input, tf_activation, activation_min=-1, activation_max=-1 ,plt_num=1):
-    # Here make sure to preprocess your image_input in a way your network expects
-    # with size, normalization, ect if needed
-    # image_input =
-    # Note: x should be the same name as your network's tensorflow data placeholder variable
-    # If you get an error tf_activation is not defined it may be having trouble accessing the variable from inside a function
-    activation = tf_activation.eval(session=sess,feed_dict={x : image_input})
-    featuremaps = activation.shape[3]
-    plt.figure(plt_num, figsize=(15,15))
-    for featuremap in range(featuremaps):
-        plt.subplot(6,8, featuremap+1) # sets the number of feature maps to show on each row and column
-        plt.title('FeatureMap ' + str(featuremap)) # displays the feature map number
-        if activation_min != -1 & activation_max != -1:
-            plt.imshow(activation[0,:,:, featuremap], interpolation="nearest", vmin =activation_min, vmax=activation_max, cmap="gray")
-        elif activation_max != -1:
-            plt.imshow(activation[0,:,:, featuremap], interpolation="nearest", vmax=activation_max, cmap="gray")
-        elif activation_min !=-1:
-            plt.imshow(activation[0,:,:, featuremap], interpolation="nearest", vmin=activation_min, cmap="gray")
-        else:
-            plt.imshow(activation[0,:,:, featuremap], interpolation="nearest", cmap="gray")
-```
